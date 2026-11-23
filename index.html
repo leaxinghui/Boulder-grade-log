@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Boulder Log</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--tx:#1d1d1b;--mu:#6d6a62;--bd:#e3dfd5;--ac:#d9531e;--ok:#2e8b57;--bad:#c0392b;--ch:#efece4;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#232321;--tx:#f0eee8;--mu:#a19e94;--bd:#37352f;--ac:#ff7a45;--ok:#4cc98a;--bad:#ff6b5b;--ch:#2e2c28;color-scheme:dark}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 12px}h2{font-size:16px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--bd);background:var(--ch);color:var(--tx);border-radius:999px;padding:7px 12px;font:inherit;cursor:pointer}
+.chip.on{background:var(--ac);border-color:var(--ac);color:#fff}
+label{display:block;font-size:12px;color:var(--mu);margin:10px 0 5px;text-transform:uppercase;letter-spacing:.04em}
+input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:9px;width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;margin-top:14px;background:var(--ac);color:#fff;border:0;border-radius:12px;padding:12px;font:600 16px inherit;cursor:pointer}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--ch);border-radius:10px;padding:10px;text-align:center}
+.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--mu)}
+.banner{border-radius:12px;padding:12px;margin-bottom:12px;font-weight:600}
+.up{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.down{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.flat{background:var(--ch);color:var(--mu)}
+.bars{display:flex;align-items:flex-end;gap:4px;height:110px}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:10px;color:var(--mu)}
+.bar i{display:block;width:100%;background:var(--ac);border-radius:4px 4px 0 0;min-height:2px}
+.cat{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)}
+.cat:last-child{border:0}
+.log{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)}
+.log small{color:var(--mu)}.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--ch);margin-left:4px}
+.x{background:none;border:0;color:var(--mu);font-size:20px;cursor:pointer}
+ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}
+.mu{color:var(--mu);font-size:13px}.wrap{overflow-x:auto}
+</style></head><body><main>
+<h1>🧗 Boulder Log</h1>
+<p class="mu" id="sync" style="margin:-6px 0 8px">Starting…</p>
+<div class="row" style="margin-bottom:12px"><button class="chip" id="exp">Export backup</button><label class="chip" style="display:inline-block;margin:0;font-size:15px;text-transform:none;letter-spacing:0;color:var(--tx)">Import backup<input id="imp" type="file" accept=".json,application/json" hidden></label></div>
+
+<div class="card"><h2>Log a boulder</h2>
+<label>Gym</label><select id="gym"></select>
+<label>Grade</label><div class="row" id="grades"></div>
+<div id="rng"></div>
+<label>Style</label><div class="row" id="cats"></div>
+<label>Result</label><div class="row" id="res"></div>
+<div class="two"><div><label>Attempts</label><input id="att" type="number" min="1" value="1"></div>
+<div><label>Sessions on it</label><input id="ses" type="number" min="1" value="1"></div></div>
+<div class="two"><div><label>Date</label><input id="date" type="date"></div>
+<div><label>Name (optional)</label><input id="name" placeholder="e.g. Blue arête"></div></div>
+<button class="btn" id="add">Add to log</button>
+<p class="mu" id="hint"></p></div>
+
+<div class="card"><h2>Progress</h2>
+<div class="row" id="per" style="margin-bottom:8px"></div>
+<div class="row" id="flt" style="margin-bottom:12px"></div>
+<div id="banner"></div><div class="stats" id="stats"></div></div>
+
+<div class="card"><h2>Hardest grade over time</h2><div class="wrap" id="line"></div></div>
+<div class="card"><h2>Sends by grade</h2><div class="bars" id="dist"></div></div>
+<div class="card"><h2>By style</h2><div id="bycat"></div></div>
+<div class="card"><h2>Exercises</h2><div class="row" id="exc" style="margin-bottom:8px"></div><div id="exlist"></div></div>
+<div class="card"><h2>GitHub sync</h2><p class="mu" style="margin-top:0">Your log is saved as one JSON file in your own repo. Create a <b>private</b> repo and a fine-grained token with Contents: read and write for that repo only. The token stays in this browser.</p>
+<label>Repo (owner/name)</label><input id="ghr" placeholder="yourname/boulder-data" autocapitalize="off">
+<div class="two"><div><label>File path</label><input id="ghp" placeholder="boulder-log.json"></div><div><label>Branch (optional)</label><input id="ghb" placeholder="main"></div></div>
+<label>Token</label><input id="ght" type="password" placeholder="github_pat_..." autocomplete="off">
+<div class="two"><button class="btn" id="ghs">Save and sync</button><button class="btn" id="ghd" style="background:var(--ch);color:var(--tx)">Disconnect</button></div></div>
+<div class="card"><h2>Gyms</h2><div class="two"><input id="gn" placeholder="Gym name"><select id="gs"><option value="V">V grades</option><option value="F">French (Font)</option><option value="C">Circuit / colours</option></select></div><button class="btn" id="addgym" style="margin:10px 0">Add gym</button><div id="gyms"></div></div>
+<div class="card"><h2>Log</h2><div id="log"></div></div>
+</main>
+<script>
+const KEY='boulder-log-v1',GR=[...Array(14).keys()],CATS=['Slab','Vertical','Overhang','Roof','Technique','Crimp','Power','Compression'];
+const RES={flash:'Flash',dayflash:'Day flash',send:'Send',project:'Project (not sent)'};
+const EX={
+Slab:['Silent feet drill: place each foot with no sound, 10 min on easy slab','Smearing on low-angle walls, trusting friction with hips close to the wall','Single-leg balance holds and slow high-steps for hip mobility'],
+Vertical:['Straight-arm hangs and lock-offs at 90° (3×10 s)','Down-climb every easy problem for precision','Pyramid sets: 4 problems one grade below your max'],
+Overhang:['Hanging knee raises or toes-to-bar (3×8)','Campus-board feet-on ladders or system-board moves','Practice heel hooks and toe hooks on steep easy problems'],
+Roof:['Core: L-sits and front lever progressions (3×6–10 s)','Heel/toe hook drills on a steep wall','Tension holds: hang from a bar and lift toes to it'],
+Technique:['Drill sets: flagging, drop-knees and backsteps on easy problems','Climb one grade down with a “no re-adjusting” rule','Film yourself and review body positions'],
+Crimp:['Half-crimp hangs, 10 s on / 3 min off, ~80% effort (5 sets)','Open-hand hangs on a 20 mm edge to protect fingers','Antagonist training: push-ups and reverse wrist curls'],
+Power:['Limit boulders: 3–5 attempts at max-grade moves with full rests','Weighted pull-ups (3×5)','Box jumps and explosive pull-ups for rate of force development'],
+Compression:['Press/squeeze holds against a wall: 3×20 s','Pinch grip block lifts or pinch hangs','Practice compression slopers and volumes at moderate grades']};
+let E=[];try{E=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(E))}catch(e){}sync()};
+const FL=[['4',0],['5',1],['5+',2],['6A',3],['6A+',3.5],['6B',4],['6B+',4.5],['6C',5],['6C+',5.5],['7A',6],['7A+',7],['7B',8],['7B+',8.5],['7C',9],['7C+',10],['8A',11]];
+const FV=['4','5','5+','6A','6B','6C','7A','7A+','7B','7C','7C+','8A','8A+','8B'];
+const mkCir=()=>[['White',0,1],['Yellow',1,2],['Green',2,3],['Blue',3,4],['Red',4,6],['Black',6,8]].map(([n,lo,hi])=>({n,lo,hi}));
+let G=[];try{G=JSON.parse(localStorage.getItem('boulder-gyms-v1')||'[]')}catch(e){}
+if(!G.length)G=[{id:'g1',n:'My gym',s:'V'}];
+const saveG=()=>{try{localStorage.setItem('boulder-gyms-v1',JSON.stringify(G))}catch(e){}gd=true;sync()};
+E.forEach(e=>{if(e.lo===undefined){e.lo=e.hi=e.g;e.l='V'+e.g}if(!e.y)e.y=G[0].id});
+let S={gi:3,gj:-1,y:G[0].id,f:'all',u:'V',c:'Slab',r:'send',p:30,ex:null};
+const gym=id=>G.find(x=>x.id===id)||G[0];
+const gl=g=>g.s==='V'?GR.map(i=>({l:'V'+i,lo:i,hi:i})):g.s==='F'?FL.map(([l,v])=>({l,lo:v,hi:v})):g.lv.map(x=>({l:x.n,lo:x.lo,hi:x.hi}));
+const fmt=v=>S.u==='F'?FV[Math.max(0,Math.min(13,Math.round(v)))]:'V'+(+v.toFixed(1));
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const ts=s=>new Date(s+'T12:00:00').getTime(),DAY=864e5,sent=e=>e.r!=='project';
+const chips=(el,items,key,fmt)=>{$(el).innerHTML=items.map(i=>`<button class="chip ${S[key]===(Array.isArray(i)?i[0]:i)?'on':''}" data-k="${key}" data-v="${Array.isArray(i)?i[0]:i}">${fmt?fmt(i):i}</button>`).join('')};
+function form(){const g=gym(S.y),L=gl(g);if(S.gi>=L.length)S.gi=0;if(S.gj<=S.gi)S.gj=-1;
+ $('gym').innerHTML=G.map(x=>`<option value="${x.id}" ${x.id===S.y?'selected':''}>${esc(x.n)} (${{V:'V grades',F:'Font',C:'Circuit'}[x.s]})</option>`).join('');
+ $('grades').innerHTML=L.map((x,i)=>`<button class="chip ${S.gi===i?'on':''}" data-k="gi" data-v="${i}">${esc(x.l)}</button>`).join('');
+ $('rng').innerHTML=g.s==='C'?`<p class="mu">${esc(L[S.gi].l)} ≈ ${fmt(L[S.gi].lo)}–${fmt(L[S.gi].hi)}</p>`:`<label>Up to (if the gym grades it as a range)</label><select id="gj"><option value="-1">Single grade</option>${L.map((x,i)=>i>S.gi?`<option value="${i}" ${S.gj===i?'selected':''}>${x.l}</option>`:'').join('')}</select>`;
+ chips('cats',CATS,'c');chips('res',Object.entries(RES),'r',i=>i[1]);
+ const fl=S.r==='flash';if(fl)$('att').value=1;$('att').disabled=fl;
+ $('hint').textContent=S.r==='flash'?'Flash = sent first try, never tried before.':S.r==='dayflash'?'Day flash = sent first try of the day, after seeing/trying it before.':S.r==='project'?'Log each session you work it; mark Send when you finish.':'Count every try, including the sending one.'}
+function inRange(p,off){const n=Date.now(),A=S.f==='all'?E:E.filter(e=>e.y===S.f);if(p===0)return off?[]:A;return A.filter(e=>{const t=ts(e.d),a=n-p*DAY*(off?2:1),b=n-(off?p*DAY:-DAY);return t>=a&&t<b})}
+const top3=a=>{const g=a.filter(sent).map(e=>e.g).sort((x,y)=>y-x).slice(0,3);return g.length?g.reduce((s,x)=>s+x,0)/g.length:null};
+const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
+function catStats(a){return CATS.map(c=>{const l=a.filter(e=>e.c===c),s=l.filter(sent);return{c,n:l.length,s:s.length,avgG:s.length?avg(s.map(e=>e.g)):null,att:s.length?avg(s.map(e=>e.a)):null,fl:s.filter(e=>e.r==='flash'||e.r==='dayflash').length}}).filter(x=>x.n)}
+function weakest(a){const cs=catStats(a),all=a.filter(sent);if(!all.length)return null;const m=avg(all.map(e=>e.g));
+ const sc=cs.filter(x=>x.n>=2).map(x=>({...x,score:(x.avgG===null?-1:x.avgG-m)-(x.att||3)*.15-(x.n-x.s)*.2})).sort((a,b)=>a.score-b.score);return sc[0]?sc[0].c:null}
+function render(){
+ const cur=inRange(S.p,0),prev=S.p?inRange(S.p,1):[],sn=cur.filter(sent);
+ $('per').innerHTML=[[7,'Week'],[30,'Month'],[365,'Year'],[0,'All']].map(([v,l])=>`<button class="chip ${S.p===v?'on':''}" data-k="p" data-v="${v}">${l}</button>`).join('');
+ $('flt').innerHTML=[['all','All gyms'],...G.map(x=>[x.id,x.n])].map(([v,l])=>`<button class="chip ${S.f===v?'on':''}" data-k="f" data-v="${v}">${esc(l)}</button>`).join('')+`<button class="chip ${S.u==='V'?'on':''}" data-k="u" data-v="V">Show V</button><button class="chip ${S.u==='F'?'on':''}" data-k="u" data-v="F">Show Font</button>`;
+ gymUI();
+ const a=top3(cur),b=top3(prev),wk=weakest(cur.length?cur:E);let ban='';
+ if(!cur.length)ban='<div class="banner flat">No climbs logged in this period yet.</div>';
+ else if(a!==null&&b!==null){const d=a-b;
+  if(d>0.2)ban=`<div class="banner up">▲ Progressing: your top-3 average rose from ${fmt(b)} to ${fmt(a)}. Keep building volume at your new level.</div>`;
+  else if(d<-0.2)ban=`<div class="banner down">▼ Dip: your top-3 average fell from ${fmt(b)} to ${fmt(a)}.${wk?` Try the ${wk} exercises below.`:''} Rest, sleep and fingers might be worth checking too.</div>`;
+  else ban=`<div class="banner flat">► Steady at about ${fmt(a)} versus the previous period.${wk?` Weakest style: ${wk}.`:''}</div>`}
+ else if(a!==null)ban=`<div class="banner flat">Top-3 average: ${fmt(a)}. Log more to see trends versus a previous period.</div>`;
+ $('banner').innerHTML=ban;
+ const fl=sn.filter(e=>e.r==='flash').length,df=sn.filter(e=>e.r==='dayflash').length,hard=sn.length?Math.max(...sn.map(e=>e.g)):null;
+ const st=[[sn.length,'Sends'],[hard===null?'–':fmt(hard),'Hardest'],[sn.length?avg(sn.map(e=>e.a)).toFixed(1):'–','Avg attempts'],[fl,'Flashes'],[df,'Day flashes'],[cur.length-sn.length,'Projects']];
+ $('stats').innerHTML=st.map(([v,l])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
+ // distribution
+ const cnt=GR.map(g=>sn.filter(e=>Math.round(e.g)===g).length),mx=Math.max(1,...cnt);
+ $('dist').innerHTML=GR.map((g,i)=>`<div class="bar">${cnt[i]||''}<i style="height:${cnt[i]/mx*85}%"></i>${fmt(g)}</div>`).join('');
+ // line: hardest per bucket
+ const bs=S.p===7?DAY:S.p===30?7*DAY:30*DAY,pts={};
+ sn.forEach(e=>{const k=Math.floor(ts(e.d)/bs);pts[k]=Math.max(pts[k]??0,e.g)});
+ const ks=Object.keys(pts).map(Number).sort((x,y)=>x-y);
+ if(ks.length<2)$('line').innerHTML='<p class="mu">Log climbs on at least two different '+(S.p===7?'days':S.p===30?'weeks':'months')+' to see a trend line.</p>';
+ else{const W=Math.max(320,ks.length*50),H=140,mn=Math.min(...ks.map(k=>pts[k]))-1,mxg=Math.max(...ks.map(k=>pts[k]))+1;
+  const X=i=>20+i*(W-40)/(ks.length-1),Y=g=>H-20-(g-mn)/(mxg-mn)*(H-40);
+  $('line').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:${W}px"><polyline fill="none" stroke="var(--ac)" stroke-width="2.5" points="${ks.map((k,i)=>X(i)+','+Y(pts[k])).join(' ')}"/>${ks.map((k,i)=>`<circle cx="${X(i)}" cy="${Y(pts[k])}" r="4" fill="var(--ac)"/><text x="${X(i)}" y="${Y(pts[k])-9}" font-size="11" text-anchor="middle" fill="var(--tx)">${fmt(pts[k])}</text><text x="${X(i)}" y="${H-4}" font-size="10" text-anchor="middle" fill="var(--mu)">${new Date(k*bs).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</text>`).join('')}</svg>`}
+ // categories
+ const cs=catStats(cur);
+ $('bycat').innerHTML=cs.length?cs.map(x=>`<div class="cat"><span>${x.c}</span><span class="mu">${x.s}/${x.n} sent · ${x.avgG===null?'–':'avg '+fmt(x.avgG)} · ${x.att===null?'–':x.att.toFixed(1)} att · ${x.fl} flash</span></div>`).join(''):'<p class="mu">Nothing logged yet.</p>';
+ // exercises
+ if(!S.ex)S.ex=wk||'Technique';
+ chips('exc',CATS,'ex');
+ $('exlist').innerHTML=(wk?`<p class="mu">Suggested focus: <b>${wk}</b> (your weakest style right now). Tap any style to see its drills.</p>`:'<p class="mu">Tap a style to see drills.</p>')+`<ul>${EX[S.ex].map(x=>`<li>${x}</li>`).join('')}</ul>`;
+ // log
+ const L=[...E].sort((x,y)=>ts(y.d)-ts(x.d)||y.id-x.id).slice(0,40);
+ $('log').innerHTML=L.length?L.map(e=>`<div class="log"><div><b>${esc(e.l)}</b> ${esc(e.n||e.c)} <span class="tag">${e.c}</span><span class="tag">${RES[e.r].split(' (')[0]}</span><br><small>${esc((G.find(x=>x.id===e.y)||{n:'Deleted gym'}).n)} · ${e.d} · ${e.a} attempt${e.a>1?'s':''} · ${e.s} session${e.s>1?'s':''}</small></div><button class="x" data-del="${e.id}" aria-label="Delete">×</button></div>`).join(''):'<p class="mu">Your climbs will show up here.</p>';
+ form()}
+document.addEventListener('click',ev=>{const t=ev.target.closest('[data-k],[data-del],[data-dg],[data-addlv]');if(!t)return;
+ if(t.dataset.dg){const id=t.dataset.dg;G=G.filter(x=>x.id!==id);if(S.y===id){S.y=G[0].id;S.gi=0;S.gj=-1}if(S.f===id)S.f='all';saveG();render();return}
+ if(t.dataset.addlv){const g=gym(t.dataset.addlv),l=g.lv[g.lv.length-1];g.lv.push({n:'New level',lo:l?l.hi:0,hi:(l?l.hi:0)+1});saveG();render();return}
+ if(t.dataset.del){D.add(Number(t.dataset.del));try{localStorage.setItem('boulder-del-v1',JSON.stringify([...D]))}catch(x){}E=E.filter(e=>e.id!=t.dataset.del);save();render();return}
+ const k=t.dataset.k,v=t.dataset.v;S[k]=(k==='p'||k==='gi')?+v:v;if(k==='gi')S.gj=-1;render()});
+document.addEventListener('change',ev=>{const t=ev.target;if(t.id==='gym'){S.y=t.value;S.gi=0;S.gj=-1;render()}else if(t.id==='gj'){S.gj=+t.value}else if(t.dataset.lv){const[id,i,f]=t.dataset.lv.split(':'),l=gym(id).lv[i];if(f==='n')l.n=t.value.trim()||l.n;else l[f]=+t.value||0;saveG();render()}});
+$('addgym').onclick=()=>{const n=$('gn').value.trim();if(!n)return;const g={id:'g'+Date.now(),n,s:$('gs').value};if(g.s==='C')g.lv=mkCir();G.push(g);saveG();S.y=g.id;S.gi=0;S.gj=-1;$('gn').value='';render()};
+function gymUI(){$('gyms').innerHTML=G.map(g=>`<div class="cat" style="display:block"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(g.n)}</b><span><span class="mu">${{V:'V grades',F:'Font',C:'Circuit'}[g.s]}</span>${G.length>1?` <button class="x" data-dg="${g.id}" aria-label="Delete gym">×</button>`:''}</span></div>${g.s==='C'?g.lv.map((l,i)=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;margin-top:6px"><input data-lv="${g.id}:${i}:n" value="${esc(l.n)}"><input type="number" step="0.5" data-lv="${g.id}:${i}:lo" value="${l.lo}"><input type="number" step="0.5" data-lv="${g.id}:${i}:hi" value="${l.hi}"></div>`).join('')+`<p class="mu">Level name · from V · to V. Set what each colour is roughly worth so circuit climbs count towards your progress.</p><button class="chip" data-addlv="${g.id}">+ level</button>`:''}</div>`).join('')}
+$('add').onclick=()=>{const a=Math.max(1,+$('att').value||1),s=Math.max(1,+$('ses').value||1);
+ const gy=gym(S.y),L=gl(gy),x=L[S.gi],t=gy.s!=='C'&&S.gj>S.gi?L[S.gj]:null,lo=x.lo,hi=t?t.hi:x.hi;S.gj=-1;
+ E.push({id:Date.now(),y:gy.id,l:t?x.l+'–'+t.l:x.l,lo,hi,g:(lo+hi)/2,c:S.c,r:S.r,a:S.r==='flash'?1:a,s:S.r==='flash'?1:s,d:$('date').value||today(),n:$('name').value.trim()});
+ save();$('name').value='';$('att').value=1;$('ses').value=1;render()};
+let D=new Set(),gd=false,tm=null,busy=false,again=false,cfg=null;
+try{D=new Set(JSON.parse(localStorage.getItem('boulder-del-v1')||'[]'))}catch(e){}
+try{cfg=JSON.parse(localStorage.getItem('boulder-gh-v1')||'null')}catch(e){}
+const setSt=t=>{$('sync').textContent=t};
+const b64=s=>btoa(unescape(encodeURIComponent(s))),unb64=s=>decodeURIComponent(escape(atob(s.replace(/\s/g,''))));
+const pack=()=>({v:1,gyms:G,entries:[...E].sort((a,b)=>a.id-b.id),del:[...D].sort((a,b)=>a-b)});
+const furl=()=>`https://api.github.com/repos/${cfg.repo}/contents/${encodeURI(cfg.path||'boulder-log.json')}`;
+const hd=()=>({Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json'});
+async function pull(){const r=await fetch(furl()+(cfg.branch?'?ref='+encodeURIComponent(cfg.branch):''),{headers:hd(),cache:'no-store'});
+ if(r.status===404)return null;
+ if(!r.ok)throw new Error(r.status===401?'Token rejected':r.status===403?'Token has no access to this repo':'GitHub error '+r.status);
+ const j=await r.json();return{sha:j.sha,data:JSON.parse(unb64(j.content))}}
+function merge(rd){if(!rd)return;
+ (rd.del||[]).forEach(i=>D.add(i));
+ const m=new Map();(rd.entries||[]).forEach(e=>{if(e&&e.id&&typeof e.g==='number'&&typeof e.l==='string')m.set(e.id,e)});E.forEach(e=>m.set(e.id,e));
+ E=[...m.values()].filter(e=>!D.has(e.id));
+ const rg=(rd.gyms||[]).filter(g=>g&&typeof g.id==='string'&&typeof g.n==='string'&&['V','F','C'].includes(g.s)&&(g.s!=='C'||Array.isArray(g.lv)));
+ if(rg.length)G=gd?[...G,...rg.filter(r=>!G.some(g=>g.id===r.id))]:[...rg,...G.filter(g=>!rg.some(r=>r.id===g.id))];
+ S.y=gym(S.y).id}
+function sync(){if(!cfg)return;if(busy){again=true;return}clearTimeout(tm);tm=setTimeout(syncNow,1500)}
+async function syncNow(){if(!cfg||busy)return;busy=true;setSt('Syncing\u2026');
+ try{for(let i=0;i<3;i++){
+  const r=await pull();merge(r&&r.data);const out=JSON.stringify(pack(),null,1);
+  try{localStorage.setItem(KEY,JSON.stringify(E));localStorage.setItem('boulder-gyms-v1',JSON.stringify(G));localStorage.setItem('boulder-del-v1',JSON.stringify([...D]))}catch(x){}
+  render();
+  const ok=()=>{gd=false;setSt('Synced with GitHub \u2713 '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))};
+  if(r&&JSON.stringify(r.data,null,1)===out){ok();break}
+  const body={message:'Boulder log update',content:b64(out)};if(r)body.sha=r.sha;if(cfg.branch)body.branch=cfg.branch;
+  const w=await fetch(furl(),{method:'PUT',headers:hd(),body:JSON.stringify(body)});
+  if(w.ok){ok();break}
+  if(w.status!==409&&w.status!==422)throw new Error(w.status===404?'Repo not found, or the token has no access to it':w.status===401||w.status===403?'Token cannot write to this repo':'GitHub error '+w.status);
+  if(i===2)throw new Error('Conflict, press Save and sync again')}
+ }catch(e){setSt('Not synced: '+(e.message||'network error')+'. Saved on this device.')}
+ busy=false;if(again){again=false;sync()}}
+function ghFill(){if(cfg){$('ghr').value=cfg.repo;$('ghp').value=cfg.path||'';$('ghb').value=cfg.branch||'';$('ght').value=cfg.token}}
+$('ghs').onclick=()=>{const repo=$('ghr').value.trim(),token=$('ght').value.trim(),path=$('ghp').value.trim()||'boulder-log.json';
+ if(!/^[\w.-]+\/[\w.-]+$/.test(repo)||!token){setSt('Enter the repo as owner/name and a token');return}
+ if(path.includes('..')){setSt('Invalid file path');return}
+ cfg={repo,token,path,branch:$('ghb').value.trim()};try{localStorage.setItem('boulder-gh-v1',JSON.stringify(cfg))}catch(e){}syncNow()};
+$('ghd').onclick=()=>{cfg=null;try{localStorage.removeItem('boulder-gh-v1')}catch(e){}$('ght').value='';setSt('Disconnected. Saved on this device only.')};
+$('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pack(),null,1)],{type:'application/json'}));a.download='boulder-log-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e4)};
+$('imp').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.entries))throw 0;
+ (j.gyms||[]).forEach(g=>{if(g&&typeof g.id==='string'&&typeof g.n==='string'&&['V','F','C'].includes(g.s)&&(g.s!=='C'||Array.isArray(g.lv))&&!G.some(x=>x.id===g.id))G.push(g)});
+ const have=new Set(E.map(e=>e.id));let n=0;
+ j.entries.forEach(e=>{if(e&&e.id&&!have.has(e.id)&&typeof e.g==='number'&&typeof e.lo==='number'&&typeof e.hi==='number'&&RES[e.r]&&CATS.includes(e.c)&&typeof e.d==='string'&&typeof e.l==='string'){E.push(e);have.add(e.id);n++}});
+ saveG();save();render();setSt('Imported '+n+' new climbs')}catch(x){setSt('That file is not a valid backup')}};r.readAsText(f);ev.target.value=''};
+$('date').value=today();render();ghFill();
+if(cfg)syncNow();else setSt('Saved on this device only. Add a GitHub repo below to sync.');
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
+</script></body></html>

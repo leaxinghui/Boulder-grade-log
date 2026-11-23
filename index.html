@@ -151,7 +151,7 @@ function render(){
  $('log').innerHTML=L.length?L.map(e=>`<div class="log"><div><b>${esc(e.l)}</b> ${esc(e.n||e.c)} <span class="tag">${e.c}</span><span class="tag">${RES[e.r].split(' (')[0]}</span><br><small>${esc((G.find(x=>x.id===e.y)||{n:'Deleted gym'}).n)} · ${e.d} · ${e.a} attempt${e.a>1?'s':''} · ${e.s} session${e.s>1?'s':''}</small></div><button class="x" data-del="${e.id}" aria-label="Delete">×</button></div>`).join(''):'<p class="mu">Your climbs will show up here.</p>';
  form()}
 document.addEventListener('click',ev=>{const t=ev.target.closest('[data-k],[data-del],[data-dg],[data-addlv]');if(!t)return;
- if(t.dataset.dg){const id=t.dataset.dg;G=G.filter(x=>x.id!==id);if(S.y===id){S.y=G[0].id;S.gi=0;S.gj=-1}if(S.f===id)S.f='all';saveG();render();return}
+ if(t.dataset.dg){const id=t.dataset.dg;G=G.filter(x=>x.id!==id);DG.add(id);try{localStorage.setItem('boulder-delg-v1',JSON.stringify([...DG]))}catch(x){}if(S.y===id){S.y=G[0].id;S.gi=0;S.gj=-1}if(S.f===id)S.f='all';saveG();render();return}
  if(t.dataset.addlv){const g=gym(t.dataset.addlv),l=g.lv[g.lv.length-1];g.lv.push({n:'New level',lo:l?l.hi:0,hi:(l?l.hi:0)+1});saveG();render();return}
  if(t.dataset.del){D.add(Number(t.dataset.del));try{localStorage.setItem('boulder-del-v1',JSON.stringify([...D]))}catch(x){}E=E.filter(e=>e.id!=t.dataset.del);save();render();return}
  const k=t.dataset.k,v=t.dataset.v;S[k]=(k==='p'||k==='gi')?+v:v;if(k==='gi')S.gj=-1;render()});
@@ -165,9 +165,10 @@ $('add').onclick=()=>{const a=Math.max(1,+$('att').value||1),s=Math.max(1,+$('se
 let D=new Set(),gd=false,tm=null,busy=false,again=false,cfg=null;
 try{D=new Set(JSON.parse(localStorage.getItem('boulder-del-v1')||'[]'))}catch(e){}
 try{cfg=JSON.parse(localStorage.getItem('boulder-gh-v1')||'null')}catch(e){}
+let DG=new Set();try{DG=new Set(JSON.parse(localStorage.getItem('boulder-delg-v1')||'[]'))}catch(e){}
 const setSt=t=>{$('sync').textContent=t};
 const b64=s=>btoa(unescape(encodeURIComponent(s))),unb64=s=>decodeURIComponent(escape(atob(s.replace(/\s/g,''))));
-const pack=()=>({v:1,gyms:G,entries:[...E].sort((a,b)=>a.id-b.id),del:[...D].sort((a,b)=>a-b)});
+const pack=()=>({v:1,gyms:G,entries:[...E].sort((a,b)=>a.id-b.id),del:[...D].sort((a,b)=>a-b),delg:[...DG].sort()});
 const furl=()=>`https://api.github.com/repos/${cfg.repo}/contents/${encodeURI(cfg.path||'boulder-log.json')}`;
 const hd=()=>({Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json'});
 async function pull(){const r=await fetch(furl()+(cfg.branch?'?ref='+encodeURIComponent(cfg.branch):''),{headers:hd(),cache:'no-store'});
@@ -175,17 +176,18 @@ async function pull(){const r=await fetch(furl()+(cfg.branch?'?ref='+encodeURICo
  if(!r.ok)throw new Error(r.status===401?'Token rejected':r.status===403?'Token has no access to this repo':'GitHub error '+r.status);
  const j=await r.json();return{sha:j.sha,data:JSON.parse(unb64(j.content))}}
 function merge(rd){if(!rd)return;
- (rd.del||[]).forEach(i=>D.add(i));
+ (rd.del||[]).forEach(i=>D.add(i));(rd.delg||[]).forEach(i=>DG.add(i));
  const m=new Map();(rd.entries||[]).forEach(e=>{if(e&&e.id&&typeof e.g==='number'&&typeof e.l==='string')m.set(e.id,e)});E.forEach(e=>m.set(e.id,e));
  E=[...m.values()].filter(e=>!D.has(e.id));
- const rg=(rd.gyms||[]).filter(g=>g&&typeof g.id==='string'&&typeof g.n==='string'&&['V','F','C'].includes(g.s)&&(g.s!=='C'||Array.isArray(g.lv)));
+ const rg=(rd.gyms||[]).filter(g=>g&&typeof g.id==='string'&&typeof g.n==='string'&&['V','F','C'].includes(g.s)&&(g.s!=='C'||Array.isArray(g.lv))&&!DG.has(g.id));
  if(rg.length)G=gd?[...G,...rg.filter(r=>!G.some(g=>g.id===r.id))]:[...rg,...G.filter(g=>!rg.some(r=>r.id===g.id))];
+ G=G.filter(g=>!DG.has(g.id));if(!G.length)G=[{id:'g'+Date.now(),n:'My gym',s:'V'}];
  S.y=gym(S.y).id}
 function sync(){if(!cfg)return;if(busy){again=true;return}clearTimeout(tm);tm=setTimeout(syncNow,1500)}
 async function syncNow(){if(!cfg||busy)return;busy=true;setSt('Syncing\u2026');
  try{for(let i=0;i<3;i++){
   const r=await pull();merge(r&&r.data);const out=JSON.stringify(pack(),null,1);
-  try{localStorage.setItem(KEY,JSON.stringify(E));localStorage.setItem('boulder-gyms-v1',JSON.stringify(G));localStorage.setItem('boulder-del-v1',JSON.stringify([...D]))}catch(x){}
+  try{localStorage.setItem(KEY,JSON.stringify(E));localStorage.setItem('boulder-gyms-v1',JSON.stringify(G));localStorage.setItem('boulder-del-v1',JSON.stringify([...D]));localStorage.setItem('boulder-delg-v1',JSON.stringify([...DG]))}catch(x){}
   render();
   const ok=()=>{gd=false;setSt('Synced with GitHub \u2713 '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))};
   if(r&&JSON.stringify(r.data,null,1)===out){ok();break}

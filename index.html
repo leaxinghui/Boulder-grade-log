@@ -36,7 +36,7 @@ input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid 
 ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}
 .mu{color:var(--mu);font-size:13px}.wrap{overflow-x:auto}
 </style></head><body><main>
-<h1>🧗 Boulder Log</h1>
+<h1>🧗 Boulder Log <small style="font-size:12px;color:var(--mu);font-weight:400">v5</small></h1>
 <p class="mu" id="sync" style="margin:-6px 0 8px">Starting…</p>
 <div class="row" style="margin-bottom:12px"><button class="chip" id="exp">Export backup</button><label class="chip" style="display:inline-block;margin:0;font-size:15px;text-transform:none;letter-spacing:0;color:var(--tx)">Import backup<input id="imp" type="file" accept=".json,application/json" hidden></label></div>
 
@@ -44,7 +44,7 @@ ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}
 <label>Gym</label><select id="gym"></select>
 <label>Grade</label><div class="row" id="grades"></div>
 <div id="rng"></div>
-<label>Style</label><div class="row" id="cats"></div>
+<label>Style (required, pick one or more)</label><div class="row" id="cats"></div>
 <label>Result</label><div class="row" id="res"></div>
 <div class="two"><div><label>Attempts</label><input id="att" type="number" min="1" value="1"></div>
 <div><label>Sessions on it</label><input id="ses" type="number" min="1" value="1"></div></div>
@@ -91,7 +91,7 @@ let G=[];try{G=JSON.parse(localStorage.getItem('boulder-gyms-v1')||'[]')}catch(e
 if(!G.length)G=[{id:'g1',n:'My gym',s:'V'}];
 const saveG=()=>{try{localStorage.setItem('boulder-gyms-v1',JSON.stringify(G))}catch(e){}gd=true;sync()};
 E.forEach(e=>{if(e.lo===undefined){e.lo=e.hi=e.g;e.l='V'+e.g}if(!e.y)e.y=G[0].id});
-let S={gi:3,gj:-1,y:G[0].id,f:'all',u:'V',c:'Slab',r:'send',p:30,ex:null};
+let S={gi:3,gj:-1,y:G[0].id,f:'all',u:'V',cs:[],r:'send',p:30,ex:null};
 const gym=id=>G.find(x=>x.id===id)||G[0];
 const gl=g=>g.s==='V'?GR.map(i=>({l:'V'+i,lo:i,hi:i})):g.s==='F'?FL.map(([l,v])=>({l,lo:v,hi:v})):g.lv.map(x=>({l:x.n,lo:x.lo,hi:x.hi}));
 const fmt=v=>S.u==='F'?FV[Math.max(0,Math.min(13,Math.round(v)))]:'V'+(+v.toFixed(1));
@@ -103,13 +103,13 @@ function form(){const g=gym(S.y),L=gl(g);if(S.gi>=L.length)S.gi=0;if(S.gj<=S.gi)
  $('gym').innerHTML=G.map(x=>`<option value="${x.id}" ${x.id===S.y?'selected':''}>${esc(x.n)} (${{V:'V grades',F:'Font',C:'Circuit'}[x.s]})</option>`).join('');
  $('grades').innerHTML=L.map((x,i)=>`<button class="chip ${S.gi===i?'on':''}" data-k="gi" data-v="${i}">${esc(x.l)}</button>`).join('');
  $('rng').innerHTML=g.s==='C'?`<p class="mu">${esc(L[S.gi].l)} ≈ ${fmt(L[S.gi].lo)}–${fmt(L[S.gi].hi)}</p>`:`<label>Up to (if the gym grades it as a range)</label><select id="gj"><option value="-1">Single grade</option>${L.map((x,i)=>i>S.gi?`<option value="${i}" ${S.gj===i?'selected':''}>${x.l}</option>`:'').join('')}</select>`;
- chips('cats',CATS,'c');chips('res',Object.entries(RES),'r',i=>i[1]);
+ $('cats').innerHTML=CATS.map(c=>`<button class="chip ${S.cs.includes(c)?'on':''}" data-tg="${c}">${c}</button>`).join('');chips('res',Object.entries(RES),'r',i=>i[1]);
  const fl=S.r==='flash';if(fl)$('att').value=1;$('att').disabled=fl;
- $('hint').textContent=S.r==='flash'?'Flash = sent first try, never tried before.':S.r==='dayflash'?'Day flash = sent first try of the day, after seeing/trying it before.':S.r==='project'?'Log each session you work it; mark Send when you finish.':'Count every try, including the sending one.'}
+ $('hint').style.color='';$('hint').textContent=S.r==='flash'?'Flash = sent first try, never tried before.':S.r==='dayflash'?'Day flash = sent first try of the day, after seeing/trying it before.':S.r==='project'?'Log each session you work it; mark Send when you finish.':'Count every try, including the sending one.'}
 function inRange(p,off){const n=Date.now(),A=S.f==='all'?E:E.filter(e=>e.y===S.f);if(p===0)return off?[]:A;return A.filter(e=>{const t=ts(e.d),a=n-p*DAY*(off?2:1),b=n-(off?p*DAY:-DAY);return t>=a&&t<b})}
 const top3=a=>{const g=a.filter(sent).map(e=>e.g).sort((x,y)=>y-x).slice(0,3);return g.length?g.reduce((s,x)=>s+x,0)/g.length:null};
 const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
-function catStats(a){return CATS.map(c=>{const l=a.filter(e=>e.c===c),s=l.filter(sent);return{c,n:l.length,s:s.length,avgG:s.length?avg(s.map(e=>e.g)):null,att:s.length?avg(s.map(e=>e.a)):null,fl:s.filter(e=>e.r==='flash'||e.r==='dayflash').length}}).filter(x=>x.n)}
+function catStats(a){return CATS.map(c=>{const l=a.filter(e=>(e.cs||[e.c]).includes(c)),s=l.filter(sent);return{c,n:l.length,s:s.length,avgG:s.length?avg(s.map(e=>e.g)):null,att:s.length?avg(s.map(e=>e.a)):null,fl:s.filter(e=>e.r==='flash'||e.r==='dayflash').length}}).filter(x=>x.n)}
 function weakest(a){const cs=catStats(a),all=a.filter(sent);if(!all.length)return null;const m=avg(all.map(e=>e.g));
  const sc=cs.filter(x=>x.n>=2).map(x=>({...x,score:(x.avgG===null?-1:x.avgG-m)-(x.att||3)*.15-(x.n-x.s)*.2})).sort((a,b)=>a.score-b.score);return sc[0]?sc[0].c:null}
 function render(){
@@ -148,9 +148,10 @@ function render(){
  $('exlist').innerHTML=(wk?`<p class="mu">Suggested focus: <b>${wk}</b> (your weakest style right now). Tap any style to see its drills.</p>`:'<p class="mu">Tap a style to see drills.</p>')+`<ul>${EX[S.ex].map(x=>`<li>${x}</li>`).join('')}</ul>`;
  // log
  const L=[...E].sort((x,y)=>ts(y.d)-ts(x.d)||y.id-x.id).slice(0,40);
- $('log').innerHTML=L.length?L.map(e=>`<div class="log"><div><b>${esc(e.l)}</b> ${esc(e.n||e.c)} <span class="tag">${e.c}</span><span class="tag">${RES[e.r].split(' (')[0]}</span><br><small>${esc((G.find(x=>x.id===e.y)||{n:'Deleted gym'}).n)} · ${e.d} · ${e.a} attempt${e.a>1?'s':''} · ${e.s} session${e.s>1?'s':''}</small></div><button class="x" data-del="${e.id}" aria-label="Delete">×</button></div>`).join(''):'<p class="mu">Your climbs will show up here.</p>';
+ $('log').innerHTML=L.length?L.map(e=>`<div class="log"><div><b>${esc(e.l)}</b> ${esc(e.n||(e.cs||[e.c]).join(' + '))} ${(e.cs||[e.c]).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}<span class="tag">${RES[e.r].split(' (')[0]}</span><br><small>${esc((G.find(x=>x.id===e.y)||{n:'Deleted gym'}).n)} · ${e.d} · ${e.a} attempt${e.a>1?'s':''} · ${e.s} session${e.s>1?'s':''}</small></div><button class="x" data-del="${e.id}" aria-label="Delete">×</button></div>`).join(''):'<p class="mu">Your climbs will show up here.</p>';
  form()}
-document.addEventListener('click',ev=>{const t=ev.target.closest('[data-k],[data-del],[data-dg],[data-addlv]');if(!t)return;
+document.addEventListener('click',ev=>{const t=ev.target.closest('[data-k],[data-del],[data-dg],[data-addlv],[data-tg]');if(!t)return;
+ if(t.dataset.tg){const c=t.dataset.tg;S.cs=S.cs.includes(c)?S.cs.filter(x=>x!==c):[...S.cs,c];render();return}
  if(t.dataset.dg){const id=t.dataset.dg;G=G.filter(x=>x.id!==id);DG.add(id);try{localStorage.setItem('boulder-delg-v1',JSON.stringify([...DG]))}catch(x){}if(S.y===id){S.y=G[0].id;S.gi=0;S.gj=-1}if(S.f===id)S.f='all';saveG();render();return}
  if(t.dataset.addlv){const g=gym(t.dataset.addlv),l=g.lv[g.lv.length-1];g.lv.push({n:'New level',lo:l?l.hi:0,hi:(l?l.hi:0)+1});saveG();render();return}
  if(t.dataset.del){D.add(Number(t.dataset.del));try{localStorage.setItem('boulder-del-v1',JSON.stringify([...D]))}catch(x){}E=E.filter(e=>e.id!=t.dataset.del);save();render();return}
@@ -158,10 +159,11 @@ document.addEventListener('click',ev=>{const t=ev.target.closest('[data-k],[data
 document.addEventListener('change',ev=>{const t=ev.target;if(t.id==='gym'){S.y=t.value;S.gi=0;S.gj=-1;render()}else if(t.id==='gj'){S.gj=+t.value}else if(t.dataset.lv){const[id,i,f]=t.dataset.lv.split(':'),l=gym(id).lv[i];if(f==='n')l.n=t.value.trim()||l.n;else l[f]=+t.value||0;saveG();render()}});
 $('addgym').onclick=()=>{const n=$('gn').value.trim();if(!n)return;const g={id:'g'+Date.now(),n,s:$('gs').value};if(g.s==='C')g.lv=mkCir();G.push(g);saveG();S.y=g.id;S.gi=0;S.gj=-1;$('gn').value='';render()};
 function gymUI(){$('gyms').innerHTML=G.map(g=>`<div class="cat" style="display:block"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(g.n)}</b><span><span class="mu">${{V:'V grades',F:'Font',C:'Circuit'}[g.s]}</span>${G.length>1?` <button class="x" data-dg="${g.id}" aria-label="Delete gym">×</button>`:''}</span></div>${g.s==='C'?g.lv.map((l,i)=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;margin-top:6px"><input data-lv="${g.id}:${i}:n" value="${esc(l.n)}"><input type="number" step="0.5" data-lv="${g.id}:${i}:lo" value="${l.lo}"><input type="number" step="0.5" data-lv="${g.id}:${i}:hi" value="${l.hi}"></div>`).join('')+`<p class="mu">Level name · from V · to V. Set what each colour is roughly worth so circuit climbs count towards your progress.</p><button class="chip" data-addlv="${g.id}">+ level</button>`:''}</div>`).join('')}
-$('add').onclick=()=>{const a=Math.max(1,+$('att').value||1),s=Math.max(1,+$('ses').value||1);
+$('add').onclick=()=>{if(!S.cs.length){$('hint').style.color='var(--bad)';$('hint').textContent='Pick at least one style before adding.';$('cats').scrollIntoView({block:'center',behavior:'smooth'});return}
+ const a=Math.max(1,+$('att').value||1),s=Math.max(1,+$('ses').value||1);
  const gy=gym(S.y),L=gl(gy),x=L[S.gi],t=gy.s!=='C'&&S.gj>S.gi?L[S.gj]:null,lo=x.lo,hi=t?t.hi:x.hi;S.gj=-1;
- E.push({id:Date.now(),y:gy.id,l:t?x.l+'–'+t.l:x.l,lo,hi,g:(lo+hi)/2,c:S.c,r:S.r,a:S.r==='flash'?1:a,s:S.r==='flash'?1:s,d:$('date').value||today(),n:$('name').value.trim()});
- save();$('name').value='';$('att').value=1;$('ses').value=1;render()};
+ E.push({id:Date.now(),y:gy.id,l:t?x.l+'–'+t.l:x.l,lo,hi,g:(lo+hi)/2,c:S.cs[0],cs:[...S.cs],r:S.r,a:S.r==='flash'?1:a,s:S.r==='flash'?1:s,d:$('date').value||today(),n:$('name').value.trim()});
+ save();$('name').value='';$('att').value=1;$('ses').value=1;S.cs=[];render()};
 let D=new Set(),gd=false,tm=null,busy=false,again=false,cfg=null;
 try{D=new Set(JSON.parse(localStorage.getItem('boulder-del-v1')||'[]'))}catch(e){}
 try{cfg=JSON.parse(localStorage.getItem('boulder-gh-v1')||'null')}catch(e){}
@@ -208,7 +210,7 @@ $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjec
 $('imp').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.entries))throw 0;
  (j.gyms||[]).forEach(g=>{if(g&&typeof g.id==='string'&&typeof g.n==='string'&&['V','F','C'].includes(g.s)&&(g.s!=='C'||Array.isArray(g.lv))&&!G.some(x=>x.id===g.id))G.push(g)});
  const have=new Set(E.map(e=>e.id));let n=0;
- j.entries.forEach(e=>{if(e&&e.id&&!have.has(e.id)&&typeof e.g==='number'&&typeof e.lo==='number'&&typeof e.hi==='number'&&RES[e.r]&&CATS.includes(e.c)&&typeof e.d==='string'&&typeof e.l==='string'){E.push(e);have.add(e.id);n++}});
+ j.entries.forEach(e=>{if(e&&e.id&&!have.has(e.id)&&typeof e.g==='number'&&typeof e.lo==='number'&&typeof e.hi==='number'&&RES[e.r]&&CATS.includes(e.c)&&typeof e.d==='string'&&typeof e.l==='string'){e.cs=Array.isArray(e.cs)?e.cs.filter(c=>CATS.includes(c)):[];if(!e.cs.length)e.cs=[e.c];E.push(e);have.add(e.id);n++}});
  saveG();save();render();setSt('Imported '+n+' new climbs')}catch(x){setSt('That file is not a valid backup')}};r.readAsText(f);ev.target.value=''};
 $('date').value=today();render();ghFill();
 if(cfg)syncNow();else setSt('Saved on this device only. Add a GitHub repo below to sync.');

@@ -36,7 +36,7 @@ input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid 
 ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}
 .mu{color:var(--mu);font-size:13px}.wrap{overflow-x:auto}
 </style></head><body><main>
-<h1>🧗 Boulder Log <small style="font-size:12px;color:var(--mu);font-weight:400">v5</small></h1>
+<h1>🧗 Boulder Log <small style="font-size:12px;color:var(--mu);font-weight:400">v6</small></h1>
 <p class="mu" id="sync" style="margin:-6px 0 8px">Starting…</p>
 <div class="row" style="margin-bottom:12px"><button class="chip" id="exp">Export backup</button><label class="chip" style="display:inline-block;margin:0;font-size:15px;text-transform:none;letter-spacing:0;color:var(--tx)">Import backup<input id="imp" type="file" accept=".json,application/json" hidden></label></div>
 
@@ -71,7 +71,7 @@ ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}
 <div class="card"><h2>Log</h2><div id="log"></div></div>
 </main>
 <script>
-const KEY='boulder-log-v1',GR=[...Array(14).keys()],CATS=['Slab','Coordination','Dynamic','Vertical','Overhang','Roof','Technique','Crimp','Power','Compression'];
+const KEY='boulder-log-v1',GR=[...Array(14).keys()],CATS=['Slab','Vertical','Overhang','Roof','Technique','Crimp','Power','Compression','Dynamic','Coordination'];
 const RES={flash:'Flash',dayflash:'Day flash',send:'Send',project:'Project (not sent)'};
 const EX={
 Slab:['Silent feet drill: place each foot with no sound, 10 min on easy slab','Smearing on low-angle walls, trusting friction with hips close to the wall','Single-leg balance holds and slow high-steps for hip mobility'],
@@ -81,7 +81,9 @@ Roof:['Core: L-sits and front lever progressions (3×6–10 s)','Heel/toe hook d
 Technique:['Drill sets: flagging, drop-knees and backsteps on easy problems','Climb one grade down with a “no re-adjusting” rule','Film yourself and review body positions'],
 Crimp:['Half-crimp hangs, 10 s on / 3 min off, ~80% effort (5 sets)','Open-hand hangs on a 20 mm edge to protect fingers','Antagonist training: push-ups and reverse wrist curls'],
 Power:['Limit boulders: 3–5 attempts at max-grade moves with full rests','Weighted pull-ups (3×5)','Box jumps and explosive pull-ups for rate of force development'],
-Compression:['Press/squeeze holds against a wall: 3×20 s','Pinch grip block lifts or pinch hangs','Practice compression slopers and volumes at moderate grades']};
+Compression:['Press/squeeze holds against a wall: 3×20 s','Pinch grip block lifts or pinch hangs','Practice compression slopers and volumes at moderate grades'],
+Dynamic:['Deadpoint drills: on easy problems, aim to touch the next hold at the very top of your swing','Hip drive practice: generate the movement from your hips with straight arms, 3 x 5 dynos with full rests','Catch and freeze: dyno to a good hold and hold the landing for 2 s to train accuracy and body tension'],
+Coordination:['Copy a stronger climber: repeat their exact hand and foot sequence on easy to medium problems','Cross-through, flagging and match-and-hop drills on one grade below your max','Slow-motion climbing: take about 10 s per move, then repeat at normal speed']};
 let E=[];try{E=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(E))}catch(e){}sync()};
 const FL=[['4',0],['5',1],['5+',2],['6A',3],['6A+',3.5],['6B',4],['6B+',4.5],['6C',5],['6C+',5.5],['7A',6],['7A+',7],['7B',8],['7B+',8.5],['7C',9],['7C+',10],['8A',11]];
